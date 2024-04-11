@@ -156,6 +156,7 @@ def eachFit(chrom, seq, tar_order, Nindex, k):
 # Calculates the fitness score for mutation chrom idx in pop
 # @ pop is a list of chroms for mutations
 def fit4par(idx, pop, seq, tar_order, Nindex, k):
+    print(f"i={idx}")
     pop[idx].fitness, pop[idx].folding = eachFit(pop[idx].chrom, seq, tar_order, Nindex, k)
     return pop[idx] 
 
@@ -691,6 +692,8 @@ def runEnum_graph(inpf, kwargs):
 
     nproc = 4 # number of CPU processors 
 
+    nproc = 1 # TODO: change later
+    
     enum(inpf, tmpf, design, k, nproc, heaven_rate, nstepheaven)
 
 
