@@ -19,6 +19,17 @@ from minmutOrganize import *
 import sys
 import os.path
 import re
+import argparse
+
+
+parser = argparse.ArgumentParser(description='Dual RAG IF command line tool')
+parser.add_argument('--input', type=str, required=True, help="Input ct file.")
+parser.add_argument('--design', type=int, required=True, help="Design method: 1 for automatic design, or 2 for manual design.")
+parser.add_argument('--target', type=str, required=True, help="A dual graph ID or  or a two-line design file containing a target 2D structure (in dot-bracket format) and a sequence with mutation regions in N.")
+parser.add_argument('--tmpf', type=str, help='A template sequence [optional]')
+parser.add_argument('--k', type=int, help='folding prediction program (1 for PKNOTS, 2 for NUPACK, 3 for IPknot) [optional]')
+parser.add_argument('--enum', default=False, action='store_true', help="Enumerate all possibilities instead of using a Genetic Algorithm [optional]")
+opt = parser.parse_args()
 
 
 # from the adjacency matrix of a graph, get all possible vertex orders from 5' to 3' end
@@ -645,7 +656,7 @@ def mutationRegion(RNA, ori_order, seq):
 def main(arg, designM, target, kwargs):
     
     # User only gives the target dual graph, need to find good mutation regions
-    if designM == '1':
+    if designM == 1:
         # get original vertex sequence from the ct file
         RNA, ori_order = ctToSequence(arg)
         
@@ -691,7 +702,10 @@ def main(arg, designM, target, kwargs):
         
        
             # run dualGA
-            runGA_graph(target+'_'+str(i+1)+'inpf', kwargs)
+            if "enum" in kwargs and kwargs["enum"] == True:
+                runEnum_graph(target+'_'+str(i+1)+'inpf', kwargs)
+            else:
+                runGA_graph(target+'_'+str(i+1)+'inpf', kwargs)
             
             # run dualGraphCheck
             doubleCheck(target+'_'+str(i+1)+'heaven.txt')
@@ -708,12 +722,16 @@ def main(arg, designM, target, kwargs):
     
     
     # User specifies the target 2D structure and the mutation regions
-    elif designM == '2':
-        runGA(target, kwargs)                
+    elif designM == 2:
+        if "enum" in kwargs and kwargs["enum"] == True:
+            runEnum(target, kwargs)
+        else:
+            runGA(target, kwargs)                
         
         # run dualGraphCheck
+        print(target.split('inpf')[0] + "heaven.txt")
         doubleCheck(target.split('inpf')[0]+'heaven.txt')
-        
+
         # run minimalCount
         os.system("ct2dot "+arg+" 1 "+arg.split('.')[0]+".out")
         minCount(target.split('inpf')[0]+'Sequences.txt', arg.split('.')[0]+".out")
@@ -732,20 +750,12 @@ def main(arg, designM, target, kwargs):
 # @ target: if designM=1, a target dual graph ID; if designM=2, a design file containing a target 2D structure in dot-bracket format and a sequence specifying the mutation regions in 'N'
 # @ kwargs: optional arguments, tmpf=a file containing a template sequence, k=folding prediction program (1 for PKNOTS, 2 for NUPACK, 3 for IPknot)     
 if __name__== "__main__":
-    
-    if len(sys.argv) < 4:
-        print("Missing input: \n* a ct file containing the original sequence's 2D structure \n* design method, 1 for a target dual graph ID, 2 for a target 2D structure file \n* if designM=1, a target dual graph ID; if designM=2, a design file containing a target 2D structure in dot-bracket format and a sequence specifying the mutation regions in 'N'")
-        sys.exit()
-    
-    arg = sys.argv[1]
-    if not os.path.isfile(arg):
-        print("input ct file not exist...")
-        sys.exit()
-    
-    designM = sys.argv[2]   
-    target = sys.argv[3]
-    
-    if designM == '1': # check if the target dual graph is valid
+    arg = opt.input
+    designM = opt.design
+    target = opt.target
+
+
+    if designM == 1: # check if the target dual graph is valid
         dualList = []
         with open('dualGraphList.txt', 'r') as f:
             lines = f.readlines()
@@ -755,7 +765,7 @@ if __name__== "__main__":
             print('Please enter a valid target dual graph ID...')
             sys.exit()
             
-    elif designM == '2':
+    elif designM == 2:
         if not os.path.isfile(target):
             print("target design file not exist...")
             sys.exit()    
@@ -764,30 +774,23 @@ if __name__== "__main__":
         print('Please enter a valid design method... 1 for a target dual graph ID, 2 for a target 2D structure file')
         sys.exit()
 
-    
     kwargs = {}
-        
-    for i in range(4, len(sys.argv)):
-        s = sys.argv[i].split('=')
-        if len(s) == 2:
-            if s[0] == 'tmpf':
-                if not os.path.isfile(s[1]):
-                    print("template sequence file not exist...")
-                    sys.exit()
-                else:
-                    kwargs['tmpf'] = s[1]
-            elif s[0] == 'k':
-                if s[1] != '1' and s[1] != '2' and s[1] != '3':
-                    print("engine selection invalid, 1 for PKNOTS, 2 for NUPACK, 3 for IPknot...")
-                    sys.exit()
-                else:
-                    kwargs['k'] = int(s[1])
-            else:
-                print('Invalid optional arguments format: tmpf=a file containing a template sequence, k=folding prediction program (1 for PKNOTS, 2 for NUPACK, 3 for IPknot)')
-                sys.exit()
-        else:
-            print('Invalid optional arguments format: tmpf=a file containing a template sequence, k=folding prediction program (1 for PKNOTS, 2 for NUPACK, 3 for IPknot)')
+
+    if opt.tmpf:
+        if not os.path.isfile(opt.tmpf):
+            print("template sequence file not exist...")
             sys.exit()
+        else:
+            kwargs['tmpf'] = opt.tmpf
+
+    if opt.k:
+        if opt.k != 1 and opt.k != 2 and opt.k != 3:
+            print("engine selection invalid, 1 for PKNOTS, 2 for NUPACK, 3 for IPknot...")
+            sys.exit()
+        else:
+            kwargs['k'] = opt.k
+
+    kwargs['enum'] = opt.enum 
 
     main(arg, designM, target, kwargs)
   

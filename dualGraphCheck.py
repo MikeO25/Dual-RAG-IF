@@ -96,10 +96,16 @@ def IPknotvsNUPACK(survivor):
     seq = survivor[0]
     heaven = survivor[3]
     
-    name = heaven.split('h')[0]
+    # TODO: make sure this doesn't mess up anything
+    name = heaven.split('heaven')[0]
     filename = name + 'Sequences.txt'
-    design = str(name.split('_')[0]) + '_' + str(name.split('_')[1])
-    
+    print(filename)
+    if "/" in name:
+        design = name.split("/")[-1]
+    else:
+        # TODO: check if this is needed
+        design = str(name.split('_')[0]) + '_' + str(name.split('_')[1])
+
     nupackGraph, nupackFold = nupackCheck(survivor)
     if nupackGraph == design:
         with open(filename, 'a+') as f:

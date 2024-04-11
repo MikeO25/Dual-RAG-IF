@@ -30,6 +30,41 @@ class Chrom:
         for i in range(ngene):
             self.chrom[i] = random.choice( lib )
 
+    def manual_assign(self, assignments):
+        self.chrom = assignments
+
+def get_permutations(length, limit=100000):
+    # TODO : do i need to get the heaven scores?
+    lib = ['A','U','C','G']
+    perms = []
+    curr = [None]*length
+  
+    stack = [(0, perms, curr)]
+    while stack:
+        if len(perms) >= limit:
+            break
+
+        n, perms, curr = stack.pop()
+        if n == length:
+            chrom = Chrom(length)
+            chrom.manual_assign(curr)
+            perms.append(chrom)
+            continue
+    
+        for i in range(len(lib)-1, -1, -1):
+            curr[n] = lib[i]
+            stack.append((n+1, perms, list(curr)))
+
+    return perms
+
+def bold(text):
+    return f"\033[1m{text}\033[0m"
+
+def print_seq(seq, Nindex):
+    seq = list(seq)
+    seq = [bold(s) if i in Nindex else s for i, s in enumerate(seq)]
+    print("".join(seq))
+
 # This function mutates the seq to residues given in chrom, and calculates the fitness by comparing folding to ss_target.
 # @ seq is our current sequence with points of mutations written as 'N'
 # @ ss_target is in dot format
@@ -44,6 +79,8 @@ def eachFit(chrom, seq, ss_target, Nindex,k):
     for i in range(len(Nindex)):
         fullseq[ Nindex[i] ] = chrom[i]
     fullseq = ''.join(fullseq)
+
+    print_seq(fullseq, Nindex)
 
     jobID = str(random.randint(10000,99999))
     jobID = jobID+str(time.time()).split('.')[1]
@@ -122,6 +159,7 @@ def eachFit(chrom, seq, ss_target, Nindex,k):
 # Calculates the fitness for mutation chrom idx in pop
 # @ pop is a list of chroms for mutations
 def fit4par(idx, pop, seq, ss, Nindex, k):
+    print(f"i={idx}")
     pop[idx].fitness, pop[idx].folding = eachFit(pop[idx].chrom, seq, ss, Nindex, k)
     return pop[idx] 
 
@@ -315,6 +353,22 @@ def heaven( pop, fullfit, nstepheaven, heaven_rate, heavenList ):
 
     return pop, heavenList
 
+# TODO: test this
+# TODO: remove heavenlist as an input argument
+def enumHeaven(pop, fullfit, heavenList):
+    for ic in range(len(pop)):
+        diff = fullfit - pop[ic].fitness
+        if diff == 0:
+            str1 = ''.join( pop[ic].chrom )
+            if [str1, pop[ic].fitness, pop[ic].folding] not in heavenList:
+                heavenList.append( [ str1, pop[ic].fitness, pop[ic].folding ] )
+            # but not necessarily to be mutated    
+            if heaven_rate > random.random(): # mutation
+                # mutate this chromosome once  
+                mutNode = random.randrange(0, len(pop[ic].chrom))
+                pop[ic].chrom[mutNode] = mutIt( pop[ic].chrom[mutNode])
+
+    return pop, heavenList
 
 # Mutate the waiveList chroms if no change in heavenList length for a while
 def stuckMutation( pop, waiveList ):
@@ -540,6 +594,76 @@ def main(inpf,tmpf,nseq,nreplace,nwaive,niter,k,nproc,acr_ave,nx,mut_good,mut_av
    return 0
 
 
+def enumMain(inpf, tmpf, design, k, nproc, heaven_rate, nstepheaven):
+
+    # Read in info. of input file
+    with open( inpf ) as f:
+        tar_order = f.readline().strip()
+        seq = f.readline().strip().upper()
+
+
+    # Use template [optional] 
+    if tmpf != None: # use template 
+        with open(tmpf) as f:
+            seq_tmp = f.readline().strip()
+
+
+    print("Length of Seq.", len(seq))
+    print(seq)
+    Nindex = [ ] # collect the index of unknown residues 
+    for r in range(len(seq)):
+       if seq[r] == "N":
+          Nindex.append( r )
+
+
+
+    # Construct chromosomes
+    n = len(Nindex)
+    print(f"Length of mutation region={n}")
+    population = get_permutations(length=n, limit=100000)
+
+    print(f"seq={seq}, tar_order={tar_order}, Nindex={Nindex}, k={k}")
+    population = calcFit(population, seq, tar_order, Nindex, k, nproc)     
+    
+    heavenList = []
+
+    population, heavenList = heaven(population, len(seq), nstepheaven, float("-inf"), heavenList )
+                                             
+    # print out heaven results
+    print(f"Length of heaven list={len(heavenList)}")
+    if len(heavenList) != 0:
+        print(design + 'heaven.txt')
+        f1 = open(design+'heaven.txt','w')
+     
+        fullseq = list(seq)
+        iseq = ''.join(fullseq)
+        f1.write( "Inquiry sequence:\n" + iseq +"\n")             
+        f1.write( "Target vertex order:\n" + tar_order +"\n")
+     
+        if tmpf != None:
+            tseq = ''.join(seq_tmp)
+            f1.write( "Template sequence:\n" + tseq +"\n")
+        
+        for ih in range(len(heavenList)):
+            newseq = []
+            for j in range(len(fullseq)):
+                if j not in Nindex:
+                    newseq.append( fullseq[j] )
+                else:
+                    newseq.append( heavenList[ih][0][Nindex.index(j)] )
+            newseq = ''.join(newseq)
+            f1.write(">\n" + newseq)
+            f1.write(" ")
+            f1.write( str(heavenList[ih][1]) + "/" + str(len(list(tar_order))*2) +"\n" )
+            f1.write( heavenList[ih][2] +"\n" )
+        f1.close()
+        print("\nSufficient chromosomes in heaven:",len(heavenList))
+        with open(design+'heaven.txt','a+') as f:
+            f.write("\nNumber of chromosomes in heaven: " + str(len(heavenList)))
+
+    return 0
+
+
 # Run genetic algorithm
 def runGA(inpf, kwargs):
     
@@ -561,7 +685,8 @@ def runGA(inpf, kwargs):
            print("template file not exist...")
            sys.exit()
 
-   design = inpf.split("i")[0]
+   # TODO: understand if this might cause a bug later
+   design = inpf.split("inpf")[0]
 
    
    
@@ -594,7 +719,62 @@ def runGA(inpf, kwargs):
 
    main(inpf,tmpf,nseq,nreplace,nwaive,niter,k,nproc,acr_ave,nx,mut_good,mut_ave,mut_bad,nstepheaven,heaven_rate,nprintheaven,nsurvivors,nstill_0,nstill_1,design)
 
+# Run enumeration algorithm
+def runEnum(inpf, kwargs):
+    
+   if not os.path.isfile(inpf):
+       print("input file not exist...")
+       sys.exit()
+   
+   k = 3 # default
+   if 'k' in kwargs:
+       k = kwargs['k']
+       if k != 1 and k != 2 and k != 3:
+           print("engine selection invalid, 1 for PKNOTS, 2 for NUPACK, 3 for IPknot...")
+           sys.exit()
+   
+   tmpf = None 
+   if 'tmpf' in kwargs:
+       tmpf = kwargs['tmpf']
+       if not os.path.isfile(tmpf):
+           print("template file not exist...")
+           sys.exit()
 
+   design = inpf.split("inpf")[0]
+
+   
+   
+   # set up
+   nseq = 500 # number of starting candidates (population size)
+   nreplace = 50 # kill the last 'nreplace', replace them with the first 'nreplace'
+   nwaive = 10 # waive any changes for 'nwaive' best chromosomes  
+
+   nstepheaven = 0 # if a chromosome has a distance to target less than 'nstepheaven', then pick it out
+   heaven_rate = 0.75 # probability to be mutated after being lifted to heaven
+   nprintheaven = 1 # print out heaven results every 'nprintheaven' steps if any
+   nstill_1 = 100 # if the heavenList is not changed for up to 'nstill' iterations, mutate chromosomes in waiveList
+   nstill_0 = 150 
+
+   nsurvivors = 500 # 500 # when the heaven has 'nsurvivors' chromosomes, stop the program 
+
+   niter = 500 # number of iteration
+
+   nproc = 4 # number of CPU processors 
+
+   mut_good = 0.30 # probability of mutation
+   mut_bad =  0.75
+   mut_ave =  0.50
+
+
+   acr_good = 0.25 # probability of cross-over
+   acr_bad =  0.25
+   acr_ave =  0.25 
+   nx = 4 # number of cross over genes   
+
+   nproc=1 # TODO: remove later
+   
+   enumMain(inpf, tmpf, design, k, nproc, heaven_rate, nstepheaven)
+   #enumMain(inpf,tmpf,nseq,nreplace,nwaive,niter,k,nproc,acr_ave,nx,mut_good,mut_ave,mut_bad,nstepheaven,heaven_rate,nprintheaven,nsurvivors,nstill_0,nstill_1,design)
 
 
 
