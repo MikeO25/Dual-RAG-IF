@@ -706,6 +706,7 @@ def runGA(inpf, kwargs):
    niter = 500 # number of iteration
 
    nproc = 4 # number of CPU processors 
+   nproc = 1 # TODO: change later
 
    mut_good = 0.30 # probability of mutation
    mut_bad =  0.75
@@ -771,7 +772,7 @@ def runEnum(inpf, kwargs):
    acr_ave =  0.25 
    nx = 4 # number of cross over genes   
 
-   nproc=1 # TODO: remove later
+   nproc = 1 # TODO: remove later
    
    enumMain(inpf, tmpf, design, k, nproc, heaven_rate, nstepheaven)
    #enumMain(inpf,tmpf,nseq,nreplace,nwaive,niter,k,nproc,acr_ave,nx,mut_good,mut_ave,mut_bad,nstepheaven,heaven_rate,nprintheaven,nsurvivors,nstill_0,nstill_1,design)

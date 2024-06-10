@@ -18,11 +18,11 @@ def minCount(Sequences, origf):
     
     if not os.path.isfile(Sequences):
       print("Sequence file not exist...")
-      sys.exit()
+      return
     
     if not os.path.isfile(origf):
       print("Original sequence file not exist...")
-      sys.exit()
+      return 
     
     dic = {}
     num = 0

@@ -7,6 +7,7 @@ Created on Tue Jun 16 01:04:19 2020
 """
 
 import re
+import os
 
 
 # @ Sequences file contains all optimized mutation candidates
@@ -14,13 +15,17 @@ import re
 # Organize the optimized mutations in ascending order
 def minmutOrganize(Sequences, origf):
     
+    if not os.path.isfile(Sequences):
+        print("Sequence file not exist...")
+        return 0
+
     dic = {}
     
     with open(origf, 'r') as f:
         f.readline()
         tmpseq = f.readline().split('\n')[0]  
         tmpseq = list(tmpseq)
-    
+
     muts = []
     with open(Sequences, 'r') as f:
         lines = f.readlines()
@@ -49,5 +54,5 @@ def minmutOrganize(Sequences, origf):
     with open(Sequences.split('m')[0]+'min_mut', 'w') as f:
         for i in range(len(dic)):
             f.write(dic[i])  
-    
+    return len(muts)
     

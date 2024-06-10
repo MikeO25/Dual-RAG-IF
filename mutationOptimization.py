@@ -491,11 +491,19 @@ def optimization(inpf, origf):
     
     if not os.path.isfile(inpf):
         print("input sequences file not exist...")
-        sys.exit()
+        return
     
     resultfile = inpf.split('S')[0] + 'min_mut_analysis'
     target_topo = inpf.split('_')[0] + '_' + inpf.split('_')[1].split('S')[0]
     
+    if not os.path.isfile(resultfile):
+        print("result file not exist...")
+        return
+
+    if not os.path.isfile(target_topo):
+        print("target topo file not exist...")
+        return
+
     with open(origf, 'r') as f:
         lines = f.readlines()
         seq_org = lines[1].split('\n')[0]

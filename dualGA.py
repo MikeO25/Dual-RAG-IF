@@ -581,6 +581,7 @@ def runGA_graph(inpf, kwargs):
    niter = 500 # number of iteration
 
    nproc = 4 # number of CPU processors 
+   nproc = 1 # TODO: change later
 
    mut_good = 0.30 # probability of mutation
    mut_bad =  0.75

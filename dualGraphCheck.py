@@ -121,7 +121,7 @@ def doubleCheck(heaven):
     
     if not os.path.isfile(heaven):
       print("Heaven file not exist...")
-      sys.exit()
+      return
     
     Survivors = getSeqJob(heaven)
     pool = multiprocessing.Pool(4)

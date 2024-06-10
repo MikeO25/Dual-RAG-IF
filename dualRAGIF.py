@@ -20,6 +20,7 @@ import sys
 import os.path
 import re
 import argparse
+import time
 
 
 parser = argparse.ArgumentParser(description='Dual RAG IF command line tool')
@@ -29,8 +30,11 @@ parser.add_argument('--target', type=str, required=True, help="A dual graph ID o
 parser.add_argument('--tmpf', type=str, help='A template sequence [optional]')
 parser.add_argument('--k', type=int, help='folding prediction program (1 for PKNOTS, 2 for NUPACK, 3 for IPknot) [optional]')
 parser.add_argument('--enum', default=False, action='store_true', help="Enumerate all possibilities instead of using a Genetic Algorithm [optional]")
+#parser.add_argument('--cores', type=int, default=1, help='number of CPU cores to use (default: 1) [optional]')
 opt = parser.parse_args()
 
+def bold(text):
+    return f"\033[1m{text}\033[0m"
 
 # from the adjacency matrix of a graph, get all possible vertex orders from 5' to 3' end
 # row 0 of adjacency matrix is for vertex 0, etc.
@@ -654,7 +658,10 @@ def mutationRegion(RNA, ori_order, seq):
 # @ target: if designM=1, a target dual graph ID; if designM=2, a design file containing a target 2D structure in dot-bracket format and a sequence specifying the mutation regions in 'N'
 # @ kwargs: optional arguments in dictionary format, tmpf=a file containing a template sequence, k=folding prediction program (1 for PKNOTS, 2 for NUPACK, 3 for IPknot)
 def main(arg, designM, target, kwargs):
-    
+    candidates_count = 0
+
+    start_time = time.time()
+
     # User only gives the target dual graph, need to find good mutation regions
     if designM == 1:
         # get original vertex sequence from the ct file
@@ -718,7 +725,7 @@ def main(arg, designM, target, kwargs):
             optimization(target+'_'+str(i+1)+'Sequences.txt', arg.split('.')[0]+".out")
             
             # organize optimization results (minmutOrganize)
-            minmutOrganize(target+'_'+str(i+1)+'min_mut_analysis', arg.split('.')[0]+".out")
+            candidates_count = minmutOrganize(target+'_'+str(i+1)+'min_mut_analysis', arg.split('.')[0]+".out")
     
     
     # User specifies the target 2D structure and the mutation regions
@@ -735,13 +742,18 @@ def main(arg, designM, target, kwargs):
         # run minimalCount
         os.system("ct2dot "+arg+" 1 "+arg.split('.')[0]+".out")
         minCount(target.split('inpf')[0]+'Sequences.txt', arg.split('.')[0]+".out")
-        
+
         # run mutationOptimization
         optimization(target.split('inpf')[0]+'Sequences.txt', arg.split('.')[0]+".out")
-        
         # organize optimization results (minmutOrganize)
-        minmutOrganize(target.split('inpf')[0]+'min_mut_analysis', arg.split('.')[0]+".out")
-                
+        candidates_count = minmutOrganize(target.split('inpf')[0]+'min_mut_analysis', arg.split('.')[0]+".out")
+
+    end_time = time.time()
+    execution_time = end_time - start_time
+
+    print()
+    print(f"{bold('Execution time')}: {execution_time} seconds")
+    print(f"{bold('Candidates found')}: {candidates_count}")   
 
 
 # Run the entire dual RAG-IF to transform the folding of an RNA sequence into a target graph
