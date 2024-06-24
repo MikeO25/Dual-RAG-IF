@@ -30,7 +30,7 @@ parser.add_argument('--target', type=str, required=True, help="A dual graph ID o
 parser.add_argument('--tmpf', type=str, help='A template sequence [optional]')
 parser.add_argument('--k', type=int, help='folding prediction program (1 for PKNOTS, 2 for NUPACK, 3 for IPknot) [optional]')
 parser.add_argument('--enum', default=False, action='store_true', help="Enumerate all possibilities instead of using a Genetic Algorithm [optional]")
-#parser.add_argument('--cores', type=int, default=1, help='number of CPU cores to use (default: 1) [optional]')
+parser.add_argument('--cores', type=int, default=1, help='number of CPU cores to use (default: 1) [optional]')
 opt = parser.parse_args()
 
 def bold(text):
@@ -802,7 +802,8 @@ if __name__== "__main__":
         else:
             kwargs['k'] = opt.k
 
-    kwargs['enum'] = opt.enum 
+    kwargs['enum'] = opt.enum
+    kwargs['cores'] = opt.cores
 
     main(arg, designM, target, kwargs)
   

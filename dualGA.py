@@ -580,8 +580,7 @@ def runGA_graph(inpf, kwargs):
 
    niter = 500 # number of iteration
 
-   nproc = 4 # number of CPU processors 
-   nproc = 1 # TODO: change later
+   nproc = kwargs["cores"] # number of CPU processors 
 
    mut_good = 0.30 # probability of mutation
    mut_bad =  0.75
@@ -691,9 +690,7 @@ def runEnum_graph(inpf, kwargs):
     heaven_rate = 0.75 # probability to be mutated after being lifted to heaven
     nprintheaven = 1 # print out heaven results every 'nprintheaven' steps if any
 
-    nproc = 4 # number of CPU processors 
-
-    nproc = 1 # TODO: change later
+    nproc = kwargs["cores"]
     
     enum(inpf, tmpf, design, k, nproc, heaven_rate, nstepheaven)
 
